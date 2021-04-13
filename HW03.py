@@ -26,8 +26,7 @@ if not os.path.exists(fname):
     sys.exit("%s: No such file in directory!" % fname)
 
 if len(fname) > MSG_LEN:
-    sys.exit("Your filename is very long and very impressive. I'm proud of you,"
-             " but please change it.")
+    sys.exit("Given filename exceeds maximum data length. Please change it.")
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
 sock.bind(("", LOCAL_PORT))  # bind for receiving confirmations
