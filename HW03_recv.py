@@ -1,24 +1,22 @@
 import socket
-import sys
-import os
 from zlib import crc32
 from hashlib import sha256
 
-PACKETLEN = 1024
-CRCLEN = 10
-COUNTERLEN = 10
-COUNTERWINSIZE = 5
-MSGLEN = PACKETLEN - CRCLEN - COUNTERLEN  # length of data
+PACKET_LEN = 1024
+CRC_LEN = COUNTER_LEN = 10
+COUNTER_WIN_SIZE_LEN = 5
+COUNTER_OF_PACKETS_LEN = 3
+MSG_LEN = PACKET_LEN - CRC_LEN - COUNTER_LEN  # length of data
+FILE_NAME = COUNTER_WIN_SIZE_LEN + COUNTER_OF_PACKETS_LEN
 
 UDP_IP = ""
 LOCAL_PORT = 5999  # where i receive
 TARGET_PORT = 4999  # where i send
 
 sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)  # Internet, UDP
-# socktwo = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+
 # receiving
-# socktwo.bind(("",TARGET_PORT))
-sock.bind((UDP_IP, LOCAL_PORT))  # zde připojujeme IP a port
+sock.bind((UDP_IP, LOCAL_PORT))
 
 print("Waiting, port: %i" % LOCAL_PORT)
 
@@ -27,67 +25,71 @@ print("Waiting, port: %i" % LOCAL_PORT)
 fname = ""
 while not fname:
     data, addr = sock.recvfrom(1024)
-    my_data = data[COUNTERLEN: len(data) - CRCLEN]
+    my_data = data[COUNTER_LEN: len(data) - CRC_LEN]
     my_crc = str(crc32(my_data))
     while len(my_crc) < 10:
         my_crc = "0" + my_crc
     try:
-        if my_crc == data[-CRCLEN:].decode('utf-8') and int(
-                data[:COUNTERLEN]) == 0:  # a very lenghtily written name check
-            fname = my_data[:-COUNTERWINSIZE].decode('utf-8')
-            winsize = my_data[-COUNTERWINSIZE:].decode("utf-8")
+        if my_crc == data[-CRC_LEN:].decode('utf-8') and int(
+                data[:COUNTER_LEN]) == 0:  # a very lenghtily written name check
+            fname = my_data[:-FILE_NAME].decode('utf-8')
+            win_size = my_data[-6:-COUNTER_OF_PACKETS_LEN].decode("utf-8")
+            num_of_packets = my_data[-COUNTER_OF_PACKETS_LEN:].decode("utf-8")
+
     except (ValueError, TypeError):
         print("Packet number not parsed")
 
-print("Connected, address:", addr[0], "\nSaving to folder:", fname, "\nSize window:", int(winsize))
+print("Connected, address:", addr[0], "\nSaving to folder:", fname,
+      "\nSize window:", int(win_size), "\nNumber of packets:", int(num_of_packets))
 SENDER_IP = addr[0]  # IP from which we are receiving packets
 
 sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
 
+
 current = 1  # current packet
 
-with open(fname, "wb+") as f:
-    while int(current) <= int(winsize):
-        while True:
-            data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+with open("NEW.jpg", "wb+") as f:
 
-            if b"HASH" in data[:COUNTERLEN]:  # the final packet is the hash
-                print("Hash received", end=" ")
-                my_data = data[COUNTERLEN: len(data) - CRCLEN]
-                my_crc = str(crc32(my_data))
+    while True:
+        data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
+
+        if b"HASH" in data[:COUNTER_LEN]:  # the final packet is the hash
+            print("Hash received", end=" ")
+            my_data = data[COUNTER_LEN: len(data) - CRC_LEN]
+            my_crc = str(crc32(my_data))
+            while len(my_crc) < 10:  # normalize crc to be 10 digits
+                my_crc = '0' + my_crc
+            if data[-CRC_LEN:].decode('utf-8') == my_crc:
+                print("correctly!")
+
+                their_hash = my_data.decode()
+                break
+            else:
+                print("incorrectly")
+                sock.sendto(b"NO", (SENDER_IP, TARGET_PORT))
+        else:
+            # -------------parse the packet-------------------------------------
+
+            try:
+                packet_num = int(data[:COUNTER_LEN])  # number of packet
+            except (ValueError, TypeError):
+                ("Packet number not parsed!")
+            else:
+                my_data = data[COUNTER_LEN: len(data) - CRC_LEN]  # the actual data
+
+                # --------------create crc--------------------------------------
+                my_crc = str(crc32(my_data))  # the crc the receiver makes
                 while len(my_crc) < 10:  # normalize crc to be 10 digits
                     my_crc = '0' + my_crc
-                if data[-CRCLEN:].decode('utf-8') == my_crc:
-                    print("correctly!")
 
-                    their_hash = my_data.decode()
-                    break
+                # -----------------evaluate correctness------------------------
+                if data[-CRC_LEN:].decode('utf-8') == my_crc:  # compare CRCs
+                    sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
+                    if packet_num == current:  # verify that this packet is not a dupe
+                        f.write(my_data)
+                        current += 1
                 else:
-                    print("incorrectly")
                     sock.sendto(b"NO", (SENDER_IP, TARGET_PORT))
-            else:
-                # -------------parse the packet-------------------------------------
-
-                try:
-                    packet_num = int(data[:COUNTERLEN])  # number of packet
-                except (ValueError, TypeError):
-                    ("Packet number not parsed!")
-                else:
-                    my_data = data[COUNTERLEN: len(data) - CRCLEN]  # the actual data
-
-                    # --------------create crc--------------------------------------
-                    my_crc = str(crc32(my_data))  # the crc the receiver makes
-                    while len(my_crc) < 10:  # normalize crc to be 10 digits
-                        my_crc = '0' + my_crc
-
-                    # -----------------evaluate correctness------------------------
-                    if data[-CRCLEN:].decode('utf-8') == my_crc:  # compare CRCs
-                        sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
-                        if packet_num == current:  # verify that this packet is not a dupe
-                            f.write(my_data)
-                            current += 1
-                    else:
-                        sock.sendto(b"NO", (SENDER_IP, TARGET_PORT))
 
 # ok will be sent even if a duplicate is received, but it will not be written in the file
 # this is so that the sender can catch up.
