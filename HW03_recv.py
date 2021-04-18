@@ -86,13 +86,14 @@ while True:
                 my_crc = '0' + my_crc
 
                 # -----------------evaluate correctness------------------------
-            if data[-CRC_LEN:].decode('utf-8') == my_crc:  # compare CRCs
-                sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
-                if packet_num == current:  # verify that this packet is not a dupe
-                    my_file += my_data
-                    current += 1
+            if data[-CRC_LEN:].decode('utf-8') == my_crc:  # compare CRCs                
+                my_ack = b"ACK"+bytes(str(packet_num), 'utf-8') # this is a little messy
+                sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
+                #if packet_num == current:  # verify that this packet is not a dupe
+                my_file += my_data
+                current += 1
             else:
-                sock.sendto(b"NO", (SENDER_IP, TARGET_PORT))
+                sock.sendto(b"RES"+bytes(str(packet_num), 'utf-8'), (SENDER_IP, TARGET_PORT))
 
 # ok will be sent even if a duplicate is received, but it will not be written in the file
 # this is so that the sender can catch up.
@@ -102,7 +103,10 @@ my_hash = str(sha256(my_file).hexdigest())
 print("Hashes matching:", my_hash == their_hash)
 if my_hash == their_hash:
     sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
-    with open(fname, "wb+") as f:
-        f.write(my_file)
+    #with open(fname, "wb+") as f:
+        #f.write(my_file)
 else:
     sock.sendto(b"XX", (SENDER_IP, TARGET_PORT))
+
+with open(fname, "wb+") as f:
+        f.write(my_file)
