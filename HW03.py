@@ -39,93 +39,94 @@ print("Sending file %s to address %s, port %i, window size %s" % (fname, UDP_IP,
 
 with open(fname, "rb") as f:
     fcontent = f.read()
-    my_hash = str(sha256(fcontent).hexdigest()).encode()
 
-    pck_count = ceil(len(fcontent) / MSG_LEN)  # how many packets to send file
-    if pck_count >= 10 ** COUNTER_LEN:
-        sys.exit("Sorry, the file is larger than is currently supported")
-    # the packet can only fit COUNTER_LEN digits
-    print("%i packets will be sent" % pck_count)
+my_hash = str(sha256(fcontent).hexdigest()).encode()
 
-    i = 0  # the iterator has to be moved manually because of the retries :/
+pck_count = ceil(len(fcontent) / MSG_LEN)  # how many packets to send file
+if pck_count >= 10 ** COUNTER_LEN:
+    sys.exit("Sorry, the file is larger than is currently supported")
+# the packet can only fit COUNTER_LEN digits
+print("%i packets will be sent" % pck_count)
 
-    retry_counter = 0
+i = 0  # the iterator has to be moved manually because of the retries :/
+
+retry_counter = 0
 
     # ------------------------- BEGIN TRANSMISSION ----------------------------
 
     # ----------------- send file name - "packet 0" ---------------------------
 
-    name_ok = False
-    while not name_ok:
-        # counter of packet
-        my_counter = "0"
-        while len(my_counter) < COUNTER_LEN:  # normalize counter
-            my_counter = "0" + my_counter
-        my_counter = bytes(my_counter, 'utf-8')  # convert to bytes
+name_ok = False
+while not name_ok:
+    # counter of packet
+    my_counter = "0"
+    while len(my_counter) < COUNTER_LEN:  # normalize counter
+        my_counter = "0" + my_counter
+    my_counter = bytes(my_counter, 'utf-8')  # convert to bytes
 
-        # counter of window size
+    # counter of window size
 
-        while len(str(WIN_SIZE)) < COUNTER_WIN_SIZE:  # normalize counter winsize
-            WIN_SIZE = "0" + str(WIN_SIZE)
+    while len(str(WIN_SIZE)) < COUNTER_WIN_SIZE:  # normalize counter winsize
+        WIN_SIZE = "0" + str(WIN_SIZE)
 
-        fname += WIN_SIZE + str(pck_count)
-        # crc of packet
-        name_crc = str(crc32(bytes(fname, 'utf-8')))
-        while len(name_crc) < 10:  # normalize crc to be 10 digits
-            name_crc = '0' + name_crc
-        name_crc = bytes(name_crc, 'utf-8')
+    fname += WIN_SIZE + str(pck_count)
+    # crc of packet
+    name_crc = str(crc32(bytes(fname, 'utf-8')))
+    while len(name_crc) < 10:  # normalize crc to be 10 digits
+        name_crc = '0' + name_crc
+    name_crc = bytes(name_crc, 'utf-8')
 
-        my_name = my_counter + bytes(fname, 'utf-8') + name_crc
+    my_name = my_counter + bytes(fname, 'utf-8') + name_crc
 
-        sock.sendto(my_name, (UDP_IP, TARGET_PORT))
-        try:
-            data, addr = sock.recvfrom(1024)
-            if data.decode('utf-8') == "OK":
-                print("Receiver confirmed name")
-                name_ok = True
-                retry_counter = 0
-        except socket.timeout:
-            print("timeout while sending file name")
-            retry_counter += 1
-            if retry_counter == 10:
-                sys.exit("Failed to send name repeatedly. Shutting down")
+    sock.sendto(my_name, (UDP_IP, TARGET_PORT))
+    try:
+        data, addr = sock.recvfrom(1024)
+        if data.decode('utf-8') == "OK":
+            print("Receiver confirmed name")
+            name_ok = True
+            retry_counter = 0
+    except socket.timeout:
+        print("timeout while sending file name")
+        retry_counter += 1
+        if retry_counter == 10:
+            sys.exit("Failed to send name repeatedly. Shutting down")
 
     # -------------------- send contents of the file --------------------------
 
-    finished = False
-    while not finished:
-        # make packet
-        mypacket = utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
+finished = False
+while not finished:
+    # make packet
+    mypacket = utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
         
-        sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
-        print("Packet %s/%s: " % ((i//MSG_LEN)+1, pck_count), end="")
+    sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
+    print("Packet %s/%s: " % ((i//MSG_LEN)+1, pck_count), end="")
 
 
         # get response
-        try:
-            data, addr = sock.recvfrom(1024)
-            # parse response
-            if data.decode('utf-8')[0:2] == "OK":  # crc matched
-                print("ok")
-                i += MSG_LEN  # only time we advance the iterator is when the
-                # message has been received ok
-                retry_counter = 0  # reset our retries
-                if i >= len(fcontent):
-                    finished = True
+    try:
+        data, addr = sock.recvfrom(1024)
+        # parse response
+        if data.decode('utf-8')[0:2] == "OK":  # crc matched
+            print("ok")
+            i += MSG_LEN  # only time we advance the iterator is when the
+            # message has been received ok
+            retry_counter = 0  # reset our retries
+            if i >= len(fcontent):
+                finished = True
 
-            elif data.decode('utf-8')[0:2] == "NO":
-                print("CRC check failed! Re-sending last packet...")
-                retry_counter += 1
-            else:
+        elif data.decode('utf-8')[0:2] == "NO":
+            print("CRC check failed! Re-sending last packet...")
+            retry_counter += 1
+        else:
                 print("Unknown response received! Re-sending?")  # this should never happen!
                 retry_counter += 1
-        except socket.timeout:  # in case of a timeout
-            print("Timeout. retrying")
-            retry_counter += 1
+    except socket.timeout:  # in case of a timeout
+        print("Timeout. retrying")
+        retry_counter += 1
 
-        if retry_counter == 10:
-            print("Failed to get proper response 10 times in a row. Aborting transmission.")
-            finished = True
+    if retry_counter == 10:
+        print("Failed to get proper response 10 times in a row. Aborting transmission.")
+        finished = True
 
 # -----------------------------send hash----------------------------------------
 

@@ -48,7 +48,8 @@ sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
 
 current = 1  # current packet
 
-my_file = b""
+my_file = b"" #we first write into a bytes object
+my_buffer = b"" #buffer data that is ahead
 
 while True:
     data, addr = sock.recvfrom(1024)  # total packet size is 1024 bytes
