@@ -48,7 +48,7 @@ sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
 
 current = 1  # current packet
 
-my_file = ""
+my_file = b""
 
 while True:
     data, addr = sock.recvfrom(1024)  # total packet size is 1024 bytes
