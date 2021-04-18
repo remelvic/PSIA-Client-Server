@@ -95,7 +95,7 @@ while True:
 # this is so that the sender can catch up.
 
 
-my_hash = str(sha256(my_file.hexdigest()))
+my_hash = str(sha256(my_file).hexdigest())
 print("Hashes matching:", my_hash == their_hash)
 if my_hash == their_hash:
     sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
