@@ -5,6 +5,8 @@ from zlib import crc32
 from hashlib import sha256
 from math import ceil
 
+import utils.py
+
 PACKET_LEN = 1024
 CRC_LEN = COUNTER_LEN = 10
 COUNTER_WIN_SIZE = 5
@@ -109,6 +111,9 @@ with open(fname, "rb") as f:
 
         # assemble and send packet
         mypacket = my_counter + mess + my_crc
+        
+        print(mypacket == utils.make_packet(i,fcontent))
+        
         sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
         print("Packet %s/%s: " % (current, pck_count), end="")
 
