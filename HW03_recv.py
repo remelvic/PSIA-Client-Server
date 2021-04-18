@@ -94,12 +94,12 @@ while True:
 # ok will be sent even if a duplicate is received, but it will not be written in the file
 # this is so that the sender can catch up.
 
-with open(fname, "rb") as f:
-    my_hash = str(sha256(f.read()).hexdigest())
-    print("Hashes matching:", my_hash == their_hash)
-    if my_hash == their_hash:
-        sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
-        with open(fname, "wb+") as f:
-            f.write(my_file)
-    else:
-        sock.sendto(b"XX", (SENDER_IP, TARGET_PORT))
+
+my_hash = str(sha256(my_file.hexdigest()))
+print("Hashes matching:", my_hash == their_hash)
+if my_hash == their_hash:
+    sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
+    with open(fname, "wb+") as f:
+        f.write(my_file)
+else:
+    sock.sendto(b"XX", (SENDER_IP, TARGET_PORT))
