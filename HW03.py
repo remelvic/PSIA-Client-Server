@@ -92,7 +92,8 @@ with open(fname, "rb") as f:
 
     # -------------------- send contents of the file --------------------------
 
-    while i < len(fcontent):
+    finished = False
+    while not finished:
         # make packet
         mypacket = utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
         
@@ -109,6 +110,9 @@ with open(fname, "rb") as f:
                 i += MSG_LEN  # only time we advance the iterator is when the
                 # message has been received ok
                 retry_counter = 0  # reset our retries
+                if i >= len(fcontent):
+                    finished = True
+
             elif data.decode('utf-8')[0:2] == "NO":
                 print("CRC check failed! Re-sending last packet...")
                 retry_counter += 1
@@ -121,7 +125,7 @@ with open(fname, "rb") as f:
 
         if retry_counter == 10:
             print("Failed to get proper response 10 times in a row. Aborting transmission.")
-            break
+            finished = True
 
 # -----------------------------send hash----------------------------------------
 
