@@ -11,7 +11,7 @@ PACKET_LEN = 1024
 CRC_LEN = COUNTER_LEN = 10
 COUNTER_WIN_SIZE = 5
 MSG_LEN = PACKET_LEN - CRC_LEN - COUNTER_LEN  # length of data
-WIN_SIZE = 150
+WIN_SIZE = 5
 
 UDP_IP = "192.168.30.21"
 
@@ -64,12 +64,7 @@ while not name_ok:
         my_counter = "0" + my_counter
     my_counter = bytes(my_counter, 'utf-8')  # convert to bytes
 
-    # counter of window size
-
-    while len(str(WIN_SIZE)) < COUNTER_WIN_SIZE:  # normalize counter winsize
-        WIN_SIZE = "0" + str(WIN_SIZE)
-
-    fname += WIN_SIZE + str(pck_count)
+    fname += ";" + str(pck_count)
     # crc of packet
     name_crc = str(crc32(bytes(fname, 'utf-8')))
     while len(name_crc) < 10:  # normalize crc to be 10 digits

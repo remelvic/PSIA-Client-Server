@@ -32,9 +32,9 @@ while not fname:
     try:
         if my_crc == data[-CRC_LEN:].decode('utf-8') and int(
                 data[:COUNTER_LEN]) == 0:  # a very lenghtily written name check
-            fname = my_data[:-FILE_NAME].decode('utf-8')
-            win_size = my_data[-6:-COUNTER_OF_PACKETS_LEN].decode("utf-8")
-            num_of_packets = my_data[-COUNTER_OF_PACKETS_LEN:].decode("utf-8")
+            my_data = str(my_data)
+            fname = my_data.split(";")[0]
+            num_of_packets = my_data.split(";")[1]
 
     except (ValueError, TypeError):
         print("Packet number not parsed")
