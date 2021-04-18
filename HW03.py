@@ -114,7 +114,7 @@ while not finished:
         # parse response
         if my_ack[0:3] == "ACK":  # crc matched
             #try:
-            ack_num = int(my_ack[2:])
+            ack_num = int(my_ack[3:])
             print("ACK", ack_num)
             awaiting_ack -=1
             last_ack += 1
