@@ -20,3 +20,6 @@ def make_packet(i, fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN):
     # assemble and return packet
     mypacket = my_counter + mess + my_crc
     return mypacket
+
+def parse_response(sock):
+    pass
