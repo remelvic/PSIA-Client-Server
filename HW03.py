@@ -5,7 +5,7 @@ from zlib import crc32
 from hashlib import sha256
 from math import ceil
 
-import utils.py
+import utils
 
 PACKET_LEN = 1024
 CRC_LEN = COUNTER_LEN = 10
@@ -13,7 +13,7 @@ COUNTER_WIN_SIZE = 5
 MSG_LEN = PACKET_LEN - CRC_LEN - COUNTER_LEN  # length of data
 WIN_SIZE = 150
 
-UDP_IP = "192.168.30.11"
+UDP_IP = "192.168.30.21"
 
 TARGET_PORT = 5999  # where this as the sender sends stuff
 LOCAL_PORT = 4999  # where this as the sender receives stuff
@@ -105,14 +105,14 @@ with open(fname, "rb") as f:
         mess = fcontent[i:i + MSG_LEN]  # the message
 
         my_crc = str(crc32(mess))
-        while len(my_crc) < 10:
+        while len(my_crc) < CRC_LEN:
             my_crc = '0' + my_crc
         my_crc = bytes(my_crc, 'utf-8')
 
         # assemble and send packet
         mypacket = my_counter + mess + my_crc
         
-        print(mypacket == utils.make_packet(i,fcontent))
+        print(mypacket == utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN,CRC_LEN))
         
         sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
         print("Packet %s/%s: " % (current, pck_count), end="")
@@ -172,7 +172,7 @@ while True:
         if data.decode('utf-8')[0:2] == "NO":
             print("Hash re-send requested by receiver")
             retry_counter += 1
-    except sock.timeout:
+    except socket.timeout:
         retry_counter += 1
         print("hash timeout. resending.")
     finally:

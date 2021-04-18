@@ -1,7 +1,10 @@
+from zlib import crc32
+
+
 """
 returns a ready to send packet
 """
-def make_packet(i, fcontent):
+def make_packet(i, fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN):
     my_counter = str(i//1024 + 1)
     while len(my_counter) < COUNTER_LEN:
         my_counter = "0" + my_counter
@@ -17,4 +20,3 @@ def make_packet(i, fcontent):
     # assemble and return packet
     mypacket = my_counter + mess + my_crc
     return mypacket
-        

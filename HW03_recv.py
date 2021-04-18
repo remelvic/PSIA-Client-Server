@@ -48,7 +48,7 @@ sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
 
 current = 1  # current packet
 
-with open("NEW.jpg", "wb+") as f:
+with open(fname, "wb+") as f:
 
     while True:
         data, addr = sock.recvfrom(1024)  # buffer size is 1024 bytes
