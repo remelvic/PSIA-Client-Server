@@ -27,20 +27,22 @@ while not fname:
     data, addr = sock.recvfrom(1024)
     my_data = data[COUNTER_LEN: len(data) - CRC_LEN]
     my_crc = str(crc32(my_data))
+    my_data = my_data.decode('utf-8')
+
     while len(my_crc) < 10:
         my_crc = "0" + my_crc
-    try:
+    #try:
         if my_crc == data[-CRC_LEN:].decode('utf-8') and int(
                 data[:COUNTER_LEN]) == 0:  # a very lenghtily written name check
             my_data = str(my_data)
             fname = my_data.split(";")[0]
-            num_of_packets = my_data.split(";")[1]
+            num_of_packets = int(my_data.split(";")[1]) #the [:-1] gets rid of an unwanted <'>
+        else: print ("a",end="")
 
-    except (ValueError, TypeError):
-        print("Packet number not parsed")
+    #except (ValueError, TypeError):
+    #    print("Packet number not parsed")
 
-print("Connected, address:", addr[0], "\nSaving to folder:", fname,
-      "\nSize window:", int(win_size), "\nNumber of packets:", int(num_of_packets))
+print("Connected, address:", addr[0], "\nSaving to folder:", fname, "\nNumber of packets:", int(num_of_packets))
 SENDER_IP = addr[0]  # IP from which we are receiving packets
 
 sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
