@@ -48,9 +48,6 @@ with open(fname, "rb") as f:
     print("%i packets will be sent" % pck_count)
 
     i = 0  # the iterator has to be moved manually because of the retries :/
-    current = 1
-    # ^ i could surely use the iterator for this with some changes but i just
-    # couldn't be arsed right now
 
     retry_counter = 0
 
@@ -96,26 +93,11 @@ with open(fname, "rb") as f:
     # -------------------- send contents of the file --------------------------
 
     while i < len(fcontent):
-        # number of packet comes first
-        my_counter = str(current)
-        while len(my_counter) < COUNTER_LEN:
-            my_counter = "0" + my_counter
-        my_counter = bytes(my_counter, 'utf-8')
-
-        mess = fcontent[i:i + MSG_LEN]  # the message
-
-        my_crc = str(crc32(mess))
-        while len(my_crc) < CRC_LEN:
-            my_crc = '0' + my_crc
-        my_crc = bytes(my_crc, 'utf-8')
-
-        # assemble and send packet
-        mypacket = my_counter + mess + my_crc
-        
-        print(mypacket == utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN,CRC_LEN))
+        # make packet
+        mypacket = utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
         
         sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
-        print("Packet %s/%s: " % (current, pck_count), end="")
+        print("Packet %s/%s: " % ((i//MSG_LEN)+1, pck_count), end="")
 
 
         # get response
@@ -126,7 +108,6 @@ with open(fname, "rb") as f:
                 print("ok")
                 i += MSG_LEN  # only time we advance the iterator is when the
                 # message has been received ok
-                current += 1  # add to counter
                 retry_counter = 0  # reset our retries
             elif data.decode('utf-8')[0:2] == "NO":
                 print("CRC check failed! Re-sending last packet...")

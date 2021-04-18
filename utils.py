@@ -5,7 +5,7 @@ from zlib import crc32
 returns a ready to send packet
 """
 def make_packet(i, fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN):
-    my_counter = str(i//1024 + 1)
+    my_counter = str((i//MSG_LEN) + 1)
     while len(my_counter) < COUNTER_LEN:
         my_counter = "0" + my_counter
     my_counter = bytes(my_counter, 'utf-8')
