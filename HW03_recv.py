@@ -45,7 +45,7 @@ while not fname:
 print("Connected, address:", addr[0], "\nSaving to folder:", fname, "\nNumber of packets:", int(num_of_packets))
 SENDER_IP = addr[0]  # IP from which we are receiving packets
 
-sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
+sock.sendto(b"ACK0", (SENDER_IP, TARGET_PORT))
 
 
 current = 1  # current packet
