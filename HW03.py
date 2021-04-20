@@ -11,7 +11,7 @@ PACKET_LEN = 1024
 CRC_LEN = COUNTER_LEN = 10
 COUNTER_WIN_SIZE = 5
 MSG_LEN = PACKET_LEN - CRC_LEN - COUNTER_LEN  # length of data
-WIN_SIZE = 5
+WIN_SIZE = 15
 
 UDP_IP = "192.168.30.21"
 
@@ -80,7 +80,7 @@ while not name_ok:
         if data.decode('utf-8') == "ACK0":
             print("Receiver confirmed name")
             name_ok = True
-            retry_counter = 0
+            timeouts = 0
     except socket.timeout:
         print("timeout while sending file name")
         timeouts += 1
@@ -107,7 +107,9 @@ while not finished:
         i += 1
 
     # get response
-    print(awaiting_ack)
+    
+    #print(awaiting_ack)
+    
     while awaiting_ack:
         try:
             data, addr = sock.recvfrom(1024)
@@ -134,6 +136,7 @@ while not finished:
             if ack_type == "ACK":
                 print("ACK", ack_num)
                 awaiting_ack.remove(ack_num)
+                timeouts = 0
                 if i > pck_count and not awaiting_ack:
                     finished = True
             elif ack_type == "RES":
