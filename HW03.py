@@ -76,7 +76,7 @@ while not name_ok:
     sock.sendto(my_name, (UDP_IP, TARGET_PORT))
     try:
         data, addr = sock.recvfrom(1024)
-        if data.decode('utf-8') == "OK":
+        if data.decode('utf-8') == "ACK0":
             print("Receiver confirmed name")
             name_ok = True
             retry_counter = 0
