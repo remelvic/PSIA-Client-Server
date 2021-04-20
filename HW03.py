@@ -9,6 +9,7 @@ import utils
 
 PACKET_LEN = 1024
 CRC_LEN = COUNTER_LEN = 10
+COUNTER_WIN_SIZE = 5
 MSG_LEN = PACKET_LEN - CRC_LEN - COUNTER_LEN  # length of data
 WIN_SIZE = 5
 
@@ -75,7 +76,7 @@ while not name_ok:
     sock.sendto(my_name, (UDP_IP, TARGET_PORT))
     try:
         data, addr = sock.recvfrom(1024)
-        if data.decode('utf-8') == "ACK0":
+        if data.decode('utf-8') == "OK":
             print("Receiver confirmed name")
             name_ok = True
             retry_counter = 0
@@ -83,7 +84,7 @@ while not name_ok:
         print("timeout while sending file name")
         retry_counter += 1
         if retry_counter == 10:
-            sys.exit("Failed to connect to receiver. Shutting down")
+            sys.exit("Failed to send name repeatedly. Shutting down")
 
     # -------------------- send contents of the file --------------------------
 
