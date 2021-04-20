@@ -88,57 +88,54 @@ while not name_ok:
 
     # -------------------- send contents of the file --------------------------
 
-
-awaiting_ack = 0
-last_ack = 0
-last_sent = 0
-
+awaiting_ack = [] #counters of packets awaiting ACK
 
 finished = False
 while not finished:
         
-    while awaiting_ack < WIN_SIZE and i < len(fcontent):
+    for j in range(WIN_SIZE):
         # make packet
         my_packet = utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
         
         sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
         print("Packet %s/%s sent " % ((i//MSG_LEN)+1, pck_count))
-        awaiting_ack += 1
-        last_sent += 1
+    
+        awaiting_ack.append((i//MSG_LEN)+1)
         i += MSG_LEN
 
-        # get response
-    try:
-        data, addr = sock.recvfrom(1024)
-        my_ack = data.decode('utf-8')
-        # parse response
-        if my_ack[0:3] == "ACK":  # crc matched
-            #try:
-            ack_num = int(my_ack[3:])
-            print("ACK", ack_num)
-            awaiting_ack -=1
-            last_ack += 1
+    # get response
+    print(awaiting_ack)
+    while awaiting_ack:
+        try:
+            data, addr = sock.recvfrom(1024)
+            my_ack = data.decode('utf-8')
+            # parse response
+            if my_ack[0:3] == "ACK":  # crc matched
+                #try:
+                ack_num = int(my_ack[3:])
+                print("ACK", ack_num)
+                awaiting_ack.remove(ack_num)
 
-            #except (ValueError, TypeError):
-                #print("ack number not parsed:" + my_ack[2:])
-            
-            retry_counter = 0  # reset our retries
-            if last_ack == pck_count:
-                finished = True
+                #except (ValueError, TypeError):
+                    #print("ack number not parsed:" + my_ack[2:])
+                
+                retry_counter = 0  # reset our retries
+                if i >= len(fcontent) and not awaiting_ack:
+                    finished = True
 
-        elif data.decode('utf-8')[0:3] == "RES":
-            print("CRC check failed! Re-sending last packet...")
-            retry_counter += 1
-        else:
-                print("Unknown response received! Re-sending?")  # this should never happen!
+            elif data.decode('utf-8')[0:3] == "RES":
+                print("CRC check failed! Re-sending last packet...")
                 retry_counter += 1
-    except socket.timeout:  # in case of a timeout
-        print("Timeout. retrying")
-        retry_counter += 1
+            else:
+                    print("Unknown response received! Re-sending?")  # this should never happen!
+                    retry_counter += 1
+        except socket.timeout:  # in case of a timeout
+            print("Timeout. retrying")
+            retry_counter += 1
 
-    if retry_counter == 10:
-        print("Failed to get proper response 10 times in a row. Aborting transmission.")
-        finished = True
+        if retry_counter == 10:
+            print("Failed to get proper response 10 times in a row. Aborting transmission.")
+            finished = True
 
 # -----------------------------send hash----------------------------------------
 
