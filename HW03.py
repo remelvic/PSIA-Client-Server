@@ -138,9 +138,9 @@ while not finished:
                     finished = True
             elif ack_type == "RES":
                 print("RES", ack_num)
-                my_packet = utils.make_packet((ack_num -1)*MSG_LEN,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
+                my_packet = utils.make_packet(ack_num,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
                 sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
-                print("Packet %s/%s sent " % ((i//MSG_LEN)+1, pck_count))
+                print("Packet %s/%s sent " % (ack_num, pck_count))
                 
 
         #     # parse response
