@@ -140,36 +140,7 @@ while not finished:
                 print("RES", ack_num)
                 my_packet = utils.make_packet(ack_num,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
                 sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
-                print("Packet %s/%s sent " % (ack_num, pck_count))
-                
-
-        #     # parse response
-        #     if ack_type == "ACK":  # crc matched
-        #         #try:
-        #         ack_num = int(my_ack[3:])
-        #         print("ACK", ack_num)
-        #         awaiting_ack.remove(ack_num)
-
-        #         #except (ValueError, TypeError):
-        #             #print("ack number not parsed:" + my_ack[2:])
-                
-        #         retry_counter = 0  # reset our retries
-        #         if i >= len(fcontent) and not awaiting_ack:
-        #             finished = True
-
-        #     elif data.decode('utf-8')[0:3] == "RES":
-        #         print("CRC check failed! Re-sending last packet...")
-        #         retry_counter += 1
-        #     else:
-        #             print("Unknown response received! Re-sending?")  # this should never happen!
-        #             retry_counter += 1
-        # except socket.timeout:  # in case of a timeout
-        #     print("Timeout. retrying")
-        #     retry_counter += 1
-
-        # if retry_counter == 10:
-        #     print("Failed to get proper response 10 times in a row. Aborting transmission.")
-        #     finished = True
+                print("Packet %s/%s sent " % (ack_num, pck_count))                
 
 # -----------------------------send hash----------------------------------------
 
