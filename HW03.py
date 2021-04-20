@@ -48,9 +48,10 @@ if pck_count >= 10 ** COUNTER_LEN:
 # the packet can only fit COUNTER_LEN digits
 print("%i packets will be sent" % pck_count)
 
-i = 0  # the iterator has to be moved manually because of the retries :/
+i = 1  # the iterator has to be moved manually because of the retries :/
 
 retry_counter = 0
+timeouts = 0
 
     # ------------------------- BEGIN TRANSMISSION ----------------------------
 
@@ -82,9 +83,9 @@ while not name_ok:
             retry_counter = 0
     except socket.timeout:
         print("timeout while sending file name")
-        retry_counter += 1
-        if retry_counter == 10:
-            sys.exit("Failed to send name repeatedly. Shutting down")
+        timeouts += 1
+        if timeouts == 10:
+            sys.exit("Failed to connect to receiver")
 
     # -------------------- send contents of the file --------------------------
 
@@ -95,13 +96,15 @@ while not finished:
         
     for j in range(WIN_SIZE):
         # make packet
+        if i > pck_count:
+            break
         my_packet = utils.make_packet(i,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
         
         sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
-        print("Packet %s/%s sent " % ((i//MSG_LEN)+1, pck_count))
+        print("Packet %s/%s sent " % (i, pck_count))
     
-        awaiting_ack.append((i//MSG_LEN)+1)
-        i += MSG_LEN
+        awaiting_ack.append(i)
+        i += 1
 
     # get response
     print(awaiting_ack)
@@ -109,33 +112,64 @@ while not finished:
         try:
             data, addr = sock.recvfrom(1024)
             my_ack = data.decode('utf-8')
-            # parse response
-            if my_ack[0:3] == "ACK":  # crc matched
-                #try:
-                ack_num = int(my_ack[3:])
+            ack_type = my_ack[0:3]
+            ack_num = int(my_ack[3:])
+        except UnicodeError:
+            print("A response was not successfully decoded")
+        except (ValueError, TypeError):
+            print("ack number not parsed:" + my_ack[3:])
+        except socket.timeout:  # in case of a timeout
+            if timeouts >= 10:
+                print("Connection to receiver has timed out.")
+                finished = True
+                break
+            print("Timeout. retrying")
+            for j in awaiting_ack:
+                my_packet = utils.make_packet(j,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
+                sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
+                print("Packet %s/%s sent " % (j, pck_count))
+            timeouts += 1
+
+        else:
+            if ack_type == "ACK":
                 print("ACK", ack_num)
                 awaiting_ack.remove(ack_num)
-
-                #except (ValueError, TypeError):
-                    #print("ack number not parsed:" + my_ack[2:])
-                
-                retry_counter = 0  # reset our retries
-                if i >= len(fcontent) and not awaiting_ack:
+                if i > pck_count and not awaiting_ack:
                     finished = True
+            elif ack_type == "RES":
+                print("RES", ack_num)
+                my_packet = utils.make_packet((ack_num -1)*MSG_LEN,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
+                sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
+                print("Packet %s/%s sent " % ((i//MSG_LEN)+1, pck_count))
+                
 
-            elif data.decode('utf-8')[0:3] == "RES":
-                print("CRC check failed! Re-sending last packet...")
-                retry_counter += 1
-            else:
-                    print("Unknown response received! Re-sending?")  # this should never happen!
-                    retry_counter += 1
-        except socket.timeout:  # in case of a timeout
-            print("Timeout. retrying")
-            retry_counter += 1
+        #     # parse response
+        #     if ack_type == "ACK":  # crc matched
+        #         #try:
+        #         ack_num = int(my_ack[3:])
+        #         print("ACK", ack_num)
+        #         awaiting_ack.remove(ack_num)
 
-        if retry_counter == 10:
-            print("Failed to get proper response 10 times in a row. Aborting transmission.")
-            finished = True
+        #         #except (ValueError, TypeError):
+        #             #print("ack number not parsed:" + my_ack[2:])
+                
+        #         retry_counter = 0  # reset our retries
+        #         if i >= len(fcontent) and not awaiting_ack:
+        #             finished = True
+
+        #     elif data.decode('utf-8')[0:3] == "RES":
+        #         print("CRC check failed! Re-sending last packet...")
+        #         retry_counter += 1
+        #     else:
+        #             print("Unknown response received! Re-sending?")  # this should never happen!
+        #             retry_counter += 1
+        # except socket.timeout:  # in case of a timeout
+        #     print("Timeout. retrying")
+        #     retry_counter += 1
+
+        # if retry_counter == 10:
+        #     print("Failed to get proper response 10 times in a row. Aborting transmission.")
+        #     finished = True
 
 # -----------------------------send hash----------------------------------------
 
