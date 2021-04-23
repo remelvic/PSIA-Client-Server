@@ -115,11 +115,13 @@ while not finished:
             data, addr = sock.recvfrom(1024)
             my_ack = data.decode('utf-8')
             ack_type = my_ack[0:3]
-            ack_num = int(my_ack[3:])
+            ack_num = int(my_ack[3:-CRC_LEN])
+            ack_crc = my_ack[-CRC_LEN:]
+
         except UnicodeError:
             print("A response was not successfully decoded")
         except (ValueError, TypeError):
-            print("ack number not parsed:" + my_ack[3:])
+            print("ack number not parsed:" + my_ack[3:-CRC_LEN])
         except socket.timeout:  # in case of a timeout
             if timeouts >= 10:
                 print("Connection to receiver has timed out.")
@@ -133,18 +135,27 @@ while not finished:
             timeouts += 1
 
         else:
-            if ack_type == "ACK":
-                print("ACK", ack_num)
-                if ack_num in awaiting_ack:
-                    awaiting_ack.remove(ack_num)
-                timeouts = 0
-                if i > pck_count and not awaiting_ack:
-                    finished = True
-            elif ack_type == "RES":
-                print("RES", ack_num)
-                my_packet = utils.make_packet(ack_num,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
-                sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
-                print("Packet %s/%s sent " % (ack_num, pck_count))                
+            my_crc = str(crc32(data[:-CRC_LEN]))
+            while len(my_crc) < CRC_LEN:  # normalize crc
+                my_crc = '0' + my_crc
+
+            # CHECK CRC
+            if my_crc == ack_crc:
+                if ack_type == "ACK":
+                    print("ACK", ack_num)
+                    if ack_num in awaiting_ack:
+                        awaiting_ack.remove(ack_num)
+                    timeouts = 0
+                    if i > pck_count and not awaiting_ack:
+                        finished = True
+                elif ack_type == "RES":
+                    print("RES", ack_num)
+                    my_packet = utils.make_packet(ack_num,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
+                    sock.sendto(my_packet, (UDP_IP, TARGET_PORT))
+                    print("Packet %s/%s sent " % (ack_num, pck_count))      
+
+            else:
+                print("ACK crc doesn't match: ", my_crc, ack_crc)          
 
 # -----------------------------send hash----------------------------------------
 
