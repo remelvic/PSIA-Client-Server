@@ -13,10 +13,10 @@ COUNTER_WIN_SIZE = 5
 MSG_LEN = PACKET_LEN - CRC_LEN - COUNTER_LEN  # length of data
 WIN_SIZE = 15
 
-UDP_IP = "192.168.30.21"
+UDP_IP = "127.0.0.1"
 
-TARGET_PORT = 5999  # where this as the sender sends stuff
-LOCAL_PORT = 4999  # where this as the sender receives stuff
+TARGET_PORT = 5998  # where this as the sender sends stuff
+LOCAL_PORT = 4998  # where this as the sender receives stuff
 
 # parse name of file
 try:
@@ -135,7 +135,8 @@ while not finished:
         else:
             if ack_type == "ACK":
                 print("ACK", ack_num)
-                awaiting_ack.remove(ack_num)
+                if ack_num in awaiting_ack:
+                    awaiting_ack.remove(ack_num)
                 timeouts = 0
                 if i > pck_count and not awaiting_ack:
                     finished = True
@@ -164,22 +165,24 @@ while True:
     print("Hash sent!")
     try:
         data, addr = sock.recvfrom(1024)
-        if data.decode('utf-8')[0:2] == "OK":
+        if data.decode('utf-8')[0:3] == "ACK":
             print("Hashes confirmed matching")
             break
 
-        if data.decode('utf-8')[0:2] == "XX":
+        if data.decode('utf-8')[0:4] == "NACK":
             print("Hashes don't match!")
             break
 
-        if data.decode('utf-8')[0:2] == "NO":
+        if data.decode('utf-8')[0:3] == "RES":
             print("Hash re-send requested by receiver")
             retry_counter += 1
+    except UnicodeError:
+        print("Unicode error")
     except socket.timeout:
-        retry_counter += 1
+        timeouts += 1
         print("hash timeout. resending.")
     finally:
-            if retry_counter == 10:
+            if timeouts == 10:
                 print("Hash confirmation not received. Can't verify match.")
                 break
 
