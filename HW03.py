@@ -77,10 +77,12 @@ while not name_ok:
     sock.sendto(my_name, (UDP_IP, TARGET_PORT))
     try:
         data, addr = sock.recvfrom(1024)
-        if data.decode('utf-8') == "ACK0":
+        if data[:4].decode('utf-8', 'ignore') == "ACK0":
             print("Receiver confirmed name")
             name_ok = True
             timeouts = 0
+        elif data[:4].decode('utf-8', 'ignore') == "RES0":
+            print("Name resend requested")
     except socket.timeout:
         print("timeout while sending file name")
         timeouts += 1
