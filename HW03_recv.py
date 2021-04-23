@@ -54,8 +54,9 @@ sock.sendto(b"ACK0", (SENDER_IP, TARGET_PORT))
 current = 1  # current packet
 
 my_file = b"" #we first write into a bytes object
-my_buffer = b"" #buffer data that is ahead
-their_hash = ""
+data_buffer = [] #buffer data that is ahead
+idx_buffer = []
+their_hash = "" #define this first
 sock.settimeout(15)
 
 while True:
@@ -97,14 +98,23 @@ while True:
 
                     # -----------------evaluate correctness------------------------
                 if crc == my_crc:  # compare CRCs                
-                    
-                    if packet_num <= current:  # verify that this packet is not a dupe
-                        my_ack = utils.make_ack(True, packet_num, CRC_LEN) # this is a little messy
-                        sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
-                    
-                        if packet_num == current:
-                            my_file += my_data
-                            current += 1
+                    my_ack = utils.make_ack(True, packet_num, CRC_LEN) # this is a little messy
+                    sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
+                    if packet_num == current:
+                        my_file += my_data
+                        current += 1
+                        while current in idx_buffer: #write buffered data if possible
+                            my_file += data_buffer[idx_buffer.index(current)]
+                            data_buffer.pop(idx_buffer.index(current))
+                            idx_buffer.remove(current)
+                            current +=1
+
+                    elif packet_num > current and packet_num not in idx_buffer: #buffer ahead of time data
+                        idx_buffer.append(packet_num)
+                        data_buffer.append(my_data)
+                        print(current, idx_buffer)
+
+
                 else:
                     my_ack = utils.make_ack(False, packet_num, CRC_LEN)
                     sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
@@ -123,6 +133,3 @@ if their_hash:
     else:
         for i in range(5):
             sock.sendto(b"NACK", (SENDER_IP, TARGET_PORT))
-    
-    with open(fname, "wb+") as f:
-            f.write(my_file)
