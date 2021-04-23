@@ -10,7 +10,7 @@ def make_packet(i, fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN):
         my_counter = "0" + my_counter
     my_counter = bytes(my_counter, 'utf-8')
     
-    mess = fcontent[(i-1)*MSG_LEN :((i-1)*MSG_LEN) + MSG_LEN]  # the message
+    mess = my_counter + fcontent[(i-1)*MSG_LEN :((i-1)*MSG_LEN) + MSG_LEN]  # the message
 
     my_crc = str(crc32(mess))
     while len(my_crc) < CRC_LEN:

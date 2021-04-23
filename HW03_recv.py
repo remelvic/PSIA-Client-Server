@@ -59,7 +59,10 @@ idx_buffer = []
 their_hash = "" #define this first
 sock.settimeout(15)
 
-while True:
+
+finished = False
+
+while not finished:
     try:
         data, addr = sock.recvfrom(1024)  # total packet size is 1024 bytes
         my_data = data[COUNTER_LEN: len(data) - CRC_LEN]
@@ -67,24 +70,26 @@ while True:
             their_hash = my_data.decode('utf-8','ignore')
         else:
             packet_num = int(data[:COUNTER_LEN])
-        crc = data[-CRC_LEN:].decode('utf-8')
+        
+        crc = data[-CRC_LEN:].decode('utf-8') #crc in packet
+       
+        my_crc = str(crc32(data[:-CRC_LEN])) #crc of what i got
+        while len(my_crc) < CRC_LEN:  # normalize crc to be 10 digits
+            my_crc = '0' + my_crc
 
     except(ValueError, TypeError, UnicodeError):
         print("A packet was not parsed")
     except socket.timeout:
         print("Connection timed out")
-        break
+        finished = True
     
     else:
         if their_hash:  # the final packet is the hash
             print("Hash received", end=" ")
-            my_crc = str(crc32(my_data))
-            while len(my_crc) < 10:  # normalize crc to be 10 digits
-                my_crc = '0' + my_crc
             if crc == my_crc:
                 print("correctly!")
                 their_hash = my_data.decode('utf-8','ignore')
-                break
+                finished = True
             else:
                 print("incorrectly")
                 sock.sendto(b"RES", (SENDER_IP, TARGET_PORT))

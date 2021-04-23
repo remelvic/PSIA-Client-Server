@@ -155,7 +155,7 @@ while not finished:
                     print("Packet %s/%s sent " % (ack_num, pck_count))      
 
             else:
-                print("ACK crc doesn't match: ", my_crc, ack_crc)          
+                print("ACK doesn't match CRC")          
 
 # -----------------------------send hash----------------------------------------
 
