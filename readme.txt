@@ -1,0 +1,1 @@
+udp port 5999. Testováno s utilitou NetDerper.
