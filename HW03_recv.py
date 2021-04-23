@@ -105,20 +105,20 @@ while not finished:
                             my_file += data_buffer[idx_buffer.index(current)]
                             data_buffer.pop(idx_buffer.index(current))
                             idx_buffer.remove(current)
-                            current +=1
+                            print("Popped %i from buffer" % current)
+                            current +=1                         
 
                     elif packet_num > current and packet_num not in idx_buffer: #buffer ahead of time data
                         idx_buffer.append(packet_num)
                         data_buffer.append(my_data)
-                        print(current, idx_buffer)
+                        print("Buffered packet %i" % packet_num)
 
 
                 else:
                     my_ack = utils.make_ack(False, packet_num, CRC_LEN)
                     sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
 
-# ok will be sent even if a duplicate is received, but it will not be written in the file
-# this is so that the sender can catch up.
+# ack will be sent even if an old packet is received, but it will not be written in the file
 
 if their_hash:
     my_hash = str(sha256(my_file).hexdigest())
