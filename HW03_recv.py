@@ -38,7 +38,7 @@ while not fname:
                 data[:COUNTER_LEN]) == 0:  # a very lenghtily written name check
             my_data = str(my_data)
             fname = my_data.split(";")[0]
-            num_of_packets = int(my_data.split(";")[1]) #the [:-1] gets rid of an unwanted <'>
+            num_of_packets = int(my_data.split(";")[1])
         else: print ("a",end="")
     except UnicodeError: 
         print("Name couldn't be decoded")
