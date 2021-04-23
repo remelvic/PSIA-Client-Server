@@ -18,7 +18,7 @@ def make_packet(i, fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN):
     my_crc = bytes(my_crc, 'utf-8')
 
     # assemble and return packet
-    mypacket = my_counter + mess + my_crc
+    mypacket = mess + my_crc
     return mypacket
 
 def make_ack(ack, packet_num, CRC_LEN):
