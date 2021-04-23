@@ -53,61 +53,70 @@ current = 1  # current packet
 
 my_file = b"" #we first write into a bytes object
 my_buffer = b"" #buffer data that is ahead
+their_hash = ""
+sock.settimeout(15)
 
 while True:
-    data, addr = sock.recvfrom(1024)  # total packet size is 1024 bytes
-
-    if b"HASH" in data[:COUNTER_LEN]:  # the final packet is the hash
-        print("Hash received", end=" ")
+    try:
+        data, addr = sock.recvfrom(1024)  # total packet size is 1024 bytes
         my_data = data[COUNTER_LEN: len(data) - CRC_LEN]
-        my_crc = str(crc32(my_data))
-        while len(my_crc) < 10:  # normalize crc to be 10 digits
-            my_crc = '0' + my_crc
-        if data[-CRC_LEN:].decode('utf-8') == my_crc:
-            print("correctly!")
-
-            their_hash = my_data.decode()
-            break
+        if b"HASH" in data[:COUNTER_LEN]:
+            their_hash = my_data.decode('utf-8','ignore')
         else:
-            print("incorrectly")
-            sock.sendto(b"NO", (SENDER_IP, TARGET_PORT))
+            packet_num = int(data[:COUNTER_LEN])
+        crc = data[-CRC_LEN:].decode('utf-8')
+
+    except(ValueError, TypeError, UnicodeError):
+        print("A packet was not parsed")
+    except socket.timeout:
+        print("Connection timed out")
+        break
+    
     else:
-            # -------------parse the packet-------------------------------------
-
-        try:
-            packet_num = int(data[:COUNTER_LEN])  # number of packet
-        except (ValueError, TypeError):
-            ("Packet number not parsed!")
-        else:
-            my_data = data[COUNTER_LEN: len(data) - CRC_LEN]  # the actual data
-
-            # --------------create crc--------------------------------------
-            my_crc = str(crc32(my_data))  # the crc the receiver makes
+        if their_hash:  # the final packet is the hash
+            print("Hash received", end=" ")
+            my_crc = str(crc32(my_data))
             while len(my_crc) < 10:  # normalize crc to be 10 digits
                 my_crc = '0' + my_crc
-
-                # -----------------evaluate correctness------------------------
-            if data[-CRC_LEN:].decode('utf-8') == my_crc:  # compare CRCs                
-                my_ack = b"ACK"+bytes(str(packet_num), 'utf-8') # this is a little messy
-                sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
-                #if packet_num == current:  # verify that this packet is not a dupe
-                my_file += my_data
-                current += 1
+            if crc == my_crc:
+                print("correctly!")
+                their_hash = my_data.decode('utf-8','ignore')
+                break
             else:
-                sock.sendto(b"RES"+bytes(str(packet_num), 'utf-8'), (SENDER_IP, TARGET_PORT))
+                print("incorrectly")
+                sock.sendto(b"RES", (SENDER_IP, TARGET_PORT))
+        else:
+                # -------------parse the packet---------------------------------
+
+                # --------------create crc--------------------------------------
+                my_crc = str(crc32(my_data))  # the crc the receiver makes
+                while len(my_crc) < 10:  # normalize crc to be 10 digits
+                    my_crc = '0' + my_crc
+
+                    # -----------------evaluate correctness------------------------
+                if crc == my_crc:  # compare CRCs                
+                    my_ack = b"ACK"+bytes(str(packet_num), 'utf-8') # this is a little messy
+                    sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
+                    #if packet_num == current:  # verify that this packet is not a dupe
+                    my_file += my_data
+                    current += 1
+                else:
+                    sock.sendto(b"RES"+bytes(str(packet_num), 'utf-8'), (SENDER_IP, TARGET_PORT))
 
 # ok will be sent even if a duplicate is received, but it will not be written in the file
 # this is so that the sender can catch up.
 
-
-my_hash = str(sha256(my_file).hexdigest())
-print("Hashes matching:", my_hash == their_hash)
-if my_hash == their_hash:
-    sock.sendto(b"OK", (SENDER_IP, TARGET_PORT))
-    #with open(fname, "wb+") as f:
-        #f.write(my_file)
-else:
-    sock.sendto(b"XX", (SENDER_IP, TARGET_PORT))
-
-with open(fname, "wb+") as f:
-        f.write(my_file)
+if their_hash:
+    my_hash = str(sha256(my_file).hexdigest())
+    print("Hashes matching:", my_hash == their_hash)
+    if my_hash == their_hash:
+        for i in range(5): # do this multiple times bc we can't resend
+            sock.sendto(b"ACK", (SENDER_IP, TARGET_PORT))
+        with open(fname, "wb+") as f:
+            f.write(my_file)
+    else:
+        for i in range(5):
+            sock.sendto(b"NACK", (SENDER_IP, TARGET_PORT))
+    
+    with open(fname, "wb+") as f:
+            f.write(my_file)
