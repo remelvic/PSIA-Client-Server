@@ -92,6 +92,7 @@ while not name_ok:
     # -------------------- send contents of the file --------------------------
 
 awaiting_ack = [] #counters of packets awaiting ACK
+send_hash = False #whether hash will be sent. will be true if file sent succesfully
 
 finished = False
 while not finished:
@@ -110,12 +111,10 @@ while not finished:
 
     # get response
     
-    #print(awaiting_ack)
-    
     while awaiting_ack:
         try:
             data, addr = sock.recvfrom(1024)
-            my_ack = data.decode('utf-8')
+            my_ack = data.decode('utf-8') #parsing the ack here
             ack_type = my_ack[0:3]
             ack_num = int(my_ack[3:-CRC_LEN])
             ack_crc = my_ack[-CRC_LEN:]
@@ -149,7 +148,8 @@ while not finished:
                         awaiting_ack.remove(ack_num)
                     timeouts = 0
                     if i > pck_count and not awaiting_ack:
-                        finished = True
+                        finished = send_hash = True
+
                 elif ack_type == "RES":
                     print("RES", ack_num)
                     my_packet = utils.make_packet(ack_num,fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN)
@@ -175,22 +175,22 @@ my_crc = bytes(my_crc, 'utf-8')
 
 mypacket = my_hash + my_crc
 
-while True:
+while send_hash:
     sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
     print("Hash sent!")
     try:
         data, addr = sock.recvfrom(1024)
         if data.decode('utf-8')[0:3] == "ACK":
             print("Hashes confirmed matching")
-            break
+            send_hash = False
 
         if data.decode('utf-8')[0:4] == "NACK":
             print("Hashes don't match!")
-            break
+            send_hash = False
 
         if data.decode('utf-8')[0:3] == "RES":
             print("Hash re-send requested by receiver")
-            retry_counter += 1
+
     except UnicodeError:
         print("Unicode error")
     except socket.timeout:
