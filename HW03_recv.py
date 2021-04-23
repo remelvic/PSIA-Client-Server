@@ -73,7 +73,7 @@ while not finished:
         
         crc = data[-CRC_LEN:].decode('utf-8') #crc in packet
        
-        my_crc = str(crc32(data[:-CRC_LEN])) #crc of what i got
+        my_crc = str(crc32(data[:len(data)-CRC_LEN])) #crc of what i got
         while len(my_crc) < CRC_LEN:  # normalize crc to be 10 digits
             my_crc = '0' + my_crc
 
@@ -94,14 +94,7 @@ while not finished:
                 print("incorrectly")
                 sock.sendto(b"RES", (SENDER_IP, TARGET_PORT))
         else:
-                # -------------parse the packet---------------------------------
-
-                # --------------create crc--------------------------------------
-                my_crc = str(crc32(my_data))  # the crc the receiver makes
-                while len(my_crc) < 10:  # normalize crc to be 10 digits
-                    my_crc = '0' + my_crc
-
-                    # -----------------evaluate correctness------------------------
+                # -----------------evaluate correctness------------------------
                 if crc == my_crc:  # compare CRCs                
                     my_ack = utils.make_ack(True, packet_num, CRC_LEN) # this is a little messy
                     sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
