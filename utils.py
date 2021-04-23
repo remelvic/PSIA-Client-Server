@@ -24,8 +24,10 @@ def make_packet(i, fcontent, COUNTER_LEN, MSG_LEN, CRC_LEN):
 def make_ack(ack, packet_num, CRC_LEN):
     if ack == True:
         my_ack = b"ACK"+bytes(str(packet_num), 'utf-8')
+        print("ACK", packet_num)
     else: 
         my_ack = b"RES"+bytes(str(packet_num), 'utf-8')
+        print("NACK", packet_num)
 
     my_crc = str(crc32(my_ack))
     while len(my_crc) < CRC_LEN:

@@ -2,6 +2,8 @@ import socket
 from zlib import crc32
 from hashlib import sha256
 
+import utils
+
 PACKET_LEN = 1024
 CRC_LEN = COUNTER_LEN = 10
 COUNTER_WIN_SIZE_LEN = 5
@@ -95,13 +97,17 @@ while True:
 
                     # -----------------evaluate correctness------------------------
                 if crc == my_crc:  # compare CRCs                
-                    my_ack = b"ACK"+bytes(str(packet_num), 'utf-8') # this is a little messy
-                    sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
-                    #if packet_num == current:  # verify that this packet is not a dupe
-                    my_file += my_data
-                    current += 1
+                    
+                    if packet_num <= current:  # verify that this packet is not a dupe
+                        my_ack = utils.make_ack(True, packet_num, CRC_LEN) # this is a little messy
+                        sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
+                    
+                        if packet_num == current:
+                            my_file += my_data
+                            current += 1
                 else:
-                    sock.sendto(b"RES"+bytes(str(packet_num), 'utf-8'), (SENDER_IP, TARGET_PORT))
+                    my_ack = utils.make_ack(False, packet_num, CRC_LEN)
+                    sock.sendto(my_ack, (SENDER_IP, TARGET_PORT))
 
 # ok will be sent even if a duplicate is received, but it will not be written in the file
 # this is so that the sender can catch up.
