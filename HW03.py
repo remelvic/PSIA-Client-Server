@@ -161,15 +161,17 @@ while not finished:
 
 hashheader = "HASH"  # this goes instead of packet number
 while len(hashheader) < COUNTER_LEN:
-    hashheader += "0"
+    hashheader = "0" + hashheader
 hashheader = bytes(hashheader, 'utf-8')
+
+my_hash = hashheader + my_hash
 
 my_crc = str(crc32(my_hash))
 while len(my_crc) < 10:  # normalize crc to be 10 digits
     my_crc = '0' + my_crc
 my_crc = bytes(my_crc, 'utf-8')
 
-mypacket = hashheader + my_hash + my_crc
+mypacket = my_hash + my_crc
 
 while True:
     sock.sendto(mypacket, (UDP_IP, TARGET_PORT))
